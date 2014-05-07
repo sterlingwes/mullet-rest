@@ -1,0 +1,8 @@
+{
+    "name": "Mullet REST Helper",
+    "version": "0.0.1",
+    "description": "",
+    "main": "main.js",
+    "dependencies": {},
+    "mullet": {}
+}
