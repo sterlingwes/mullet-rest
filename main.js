@@ -6,7 +6,8 @@
 * @exports {Object} api
 */
 
-var EJSON = require('meteor-ejson');
+var EJSON = require('meteor-ejson')
+  , _ = require('underscore');
 
 module.exports = function() {
     
@@ -47,15 +48,44 @@ module.exports = function() {
                 });
             });
             
-            // allow partial update
+            app.post(name, function(req,res) {
+                var data = EJSON.parse(req.body.data);
+                
+                cfg.schema.insert(data, function(err,result) {
+                    var resp = getBasicResponse(err);
+                    resp.added = data;
+                    
+                    if(typeof cfg.done === 'function') {
+                        cfg.done('post', data);
+                    }
+                    res.json(resp, err ? 500 : 200);
+                });
+            });
+            
+            // allow partial update / removal
             app.put(name, function(req,res) {
                 var selector = EJSON.parse(req.body.selector)
-                  , data = EJSON.parse(req.body.data);
+                  , data = req.body.data ? EJSON.parse(req.body.data) : false;
                     
                 if(!selector._id)
                     return res.json({ok:false, reason:'Invalid selector for update.', selector:selector});
+                    
+                if(!data && !req.body.field)
+                    return res.json({ok:false, reason:'Invalid request.'});
                 
-                cfg.schema.update(selector, {$set: data}, function(err,result) {
+                var chgSet = {};
+                
+                // we're unsetting something
+                if(!data) {
+                    chgSet.$unset = {};
+                    chgSet.$unset[req.body.field] = 1;
+                }
+                else {
+                    chgSet.$set = {};
+                    chgSet.$set[data.field] = _.pick(data, 'type', 'content');
+                }
+                
+                cfg.schema.update(selector, chgSet, function(err,result) {
                     var resp = getBasicResponse(err);
                     resp.result = result;
                     
@@ -69,6 +99,23 @@ module.exports = function() {
                     }
                     else
                         res.json(resp, err ? 500 : 200);
+                });
+            });
+            
+            app.delete(name, function(req,res) {
+                var selector = EJSON.parse(req.body.selector);
+                    
+                if(!selector._id)
+                    return res.json({ok:false, reason:'Invalid selector for removal.', selector:selector});
+                    
+                cfg.schema.remove(selector, function(err,result) {
+                    var resp = getBasicResponse(err);
+                    resp.result = result;
+                    
+                    if(typeof cfg.done === 'function' && result) {
+                        cfg.done('delete', selector._id);
+                    }
+                    res.json(resp, err ? 500 : 200);
                 });
             });
             
