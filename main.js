@@ -23,7 +23,7 @@ module.exports = function() {
         /*
          * listen(cfg)
          *
-         * @param {Object} server is a reference to the server app
+         * @param {Object} app is a reference to the server app
          * @param {Object} cfg is an object literal with:
          * @param {String} cfg.name for endpoint, will lead to: /api/cfg.name
          * @param {Object} cfg.schema instance of database schema forming resource basis
@@ -49,14 +49,14 @@ module.exports = function() {
             });
             
             app.post(name, function(req,res) {
-                var data = EJSON.parse(req.body.data);
+                var data = _.pick(req.body, cfg.whitelist);
                 
                 cfg.schema.insert(data, function(err,result) {
                     var resp = getBasicResponse(err);
                     resp.added = data;
                     
                     if(typeof cfg.done === 'function') {
-                        cfg.done('post', data);
+                        cfg.done('post', result);
                     }
                     res.json(resp, err ? 500 : 200);
                 });
@@ -64,11 +64,10 @@ module.exports = function() {
             
             // allow partial update / removal
             app.put(name, function(req,res) {
-                var selector = EJSON.parse(req.body.selector)
-                  , data = req.body.data ? EJSON.parse(req.body.data) : false;
+                var data = EJSON.parse(req.body);
                     
-                if(!selector._id)
-                    return res.json({ok:false, reason:'Invalid selector for update.', selector:selector});
+                if(!data._id)
+                    return res.json({ok:false, reason:'Invalid selector for update.', data:data});
                     
                 if(!data && !req.body.field)
                     return res.json({ok:false, reason:'Invalid request.'});
@@ -82,15 +81,15 @@ module.exports = function() {
                 }
                 else {
                     chgSet.$set = {};
-                    chgSet.$set[data.field] = _.pick(data, 'type', 'content');
+                    chgSet.$set[data.field] = _.pick(data, 'title', 'body');
                 }
                 
-                cfg.schema.update(selector, chgSet, function(err,result) {
+                cfg.schema.update({_id: data._id}, chgSet, function(err,result) {
                     var resp = getBasicResponse(err);
                     resp.result = result;
                     
                     if(typeof cfg.done === 'function' && result) {
-                        cfg.schema.find({_id:selector._id.toHexString()}, function(err,posts) {
+                        cfg.schema.find({_id:data._id}, function(err,posts) {
                             if(posts && posts.length) {
                                 cfg.done('put', posts[0]);
                                 res.json(resp, err ? 500 : 200);
