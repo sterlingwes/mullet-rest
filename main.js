@@ -41,7 +41,7 @@ module.exports = function() {
                 cfg.schema.find({}, function(err,posts) {
                     var resp = getBasicResponse(err);
                     resp[name] = EJSON.toJSONValue(posts);
-                    res.json(resp, err ? 500 : 200);
+                    res.json(err ? 500 : 200, resp);
                     
                     if(typeof cfg.done === 'function')
                         cfg.done('get');
@@ -61,7 +61,7 @@ module.exports = function() {
                     if(typeof cfg.done === 'function') {
                         cfg.done('post', result);
                     }
-                    res.json(resp, err ? 500 : 200);
+                    res.json(err ? 500 : 200, resp);
                 });
             });
             
@@ -82,7 +82,7 @@ module.exports = function() {
                         cfg.done('put', updPost);
                     }
                     
-                    res.json(resp, err ? 500 : 200);
+                    res.json(err ? 500 : 200, resp);
                 });
             });
             
@@ -99,7 +99,7 @@ module.exports = function() {
                     if(typeof cfg.done === 'function' && result) {
                         cfg.done('delete', selector._id);
                     }
-                    res.json(resp, err ? 500 : 200);
+                    res.json(err ? 500 : 200, resp);
                 });
             });
             
