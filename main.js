@@ -86,9 +86,9 @@ module.exports = function() {
                 });
             });
             
-            app.delete(name, function(req,res) {
-                var selector = EJSON.parse(req.body.selector);
-                    
+            app.delete(name + '/:id', function(req,res) {
+                var selector = { _id : req.params.id };
+                  
                 if(!selector._id)
                     return res.json({ok:false, reason:'Invalid selector for removal.', selector:selector});
                     
@@ -97,7 +97,7 @@ module.exports = function() {
                     resp.result = result;
                     
                     if(typeof cfg.done === 'function' && result) {
-                        cfg.done('delete', selector._id);
+                        cfg.done('delete');
                     }
                     res.json(err ? 500 : 200, resp);
                 });
